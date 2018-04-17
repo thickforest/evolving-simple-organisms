@@ -1,12 +1,14 @@
-#------------------------------------------------------------------------------+
+#!/usr/bin/python
+#coding:utf-8
+#------------------------------------------------------------------------+
 #
 #   Nathan A. Rooy
 #   Evolving Simple Organisms
 #   2017-Nov.
 #
-#------------------------------------------------------------------------------+
+#------------------------------------------------------------------------+
 
-#--- IMPORT DEPENDENCIES ------------------------------------------------------+
+#--- IMPORT DEPENDENCIES ------------------------------------------------+
 
 from __future__ import division
 from collections import defaultdict
@@ -33,7 +35,9 @@ from random import random
 from random import sample
 from random import uniform
 
-#--- CONSTANTS ----------------------------------------------------------------+
+import os
+
+#--- CONSTANTS ----------------------------------------------------------+
 
 settings = {}
 
@@ -56,14 +60,14 @@ settings['x_max'] =  2.0        # arena eastern border
 settings['y_min'] = -2.0        # arena southern border
 settings['y_max'] =  2.0        # arena northern border
 
-settings['plot'] = False        # plot final generation?
+settings['plot'] = True         # plot final generation?
 
 # ORGANISM NEURAL NET SETTINGS
 settings['inodes'] = 1          # number of input nodes
 settings['hnodes'] = 5          # number of hidden nodes
 settings['onodes'] = 2          # number of output nodes
 
-#--- FUNCTIONS ----------------------------------------------------------------+
+#--- FUNCTIONS ----------------------------------------------------------+
 
 def dist(x1,y1,x2,y2):
     return sqrt((x2-x1)**2 + (y2-y1)**2)
@@ -75,7 +79,6 @@ def calc_heading(org, food):
     theta_d = degrees(atan2(d_y, d_x)) - org.r
     if abs(theta_d) > 180: theta_d += 360
     return theta_d / 180
-
 
 def plot_frame(settings, organisms, foods, gen, time):
     fig, ax = plt.subplots()
@@ -101,9 +104,15 @@ def plot_frame(settings, organisms, foods, gen, time):
     plt.figtext(0.025, 0.95,r'GENERATION: '+str(gen))
     plt.figtext(0.025, 0.90,r'T_STEP: '+str(time))
 
-    plt.savefig(str(gen)+'-'+str(time)+'.png', dpi=100)
-##    plt.show()
-
+    s_time = str(time)
+    s_time = '0' * (4-len(s_time)) + s_time
+    plt.savefig('images/'+str(gen)+'-'+s_time+'.png', dpi=100)
+    # plt.show()
+    '''
+    防止报错，防止内存爆炸：
+    /usr/lib/python2.7/dist-packages/matplotlib/pyplot.py:524: RuntimeWarning: More than 20 figures have been opened. Figures created through the pyplot interface (`matplotlib.pyplot.figure`) are retained until explicitly closed and may consume too much memory. (To control this warning, see the rcParam `figure.max_open_warning`).
+    '''
+    plt.close()
 
 def evolve(settings, organisms_old, gen):
 
@@ -182,7 +191,9 @@ def simulate(settings, organisms, foods, gen):
 
         # PLOT SIMULATION FRAME
         if settings['plot']==True and gen==settings['gens']-1:
+        # if settings['plot']==True:
             plot_frame(settings, organisms, foods, gen, t_step)
+
         
         # UPDATE FITNESS FUNCTION
         for food in foods:
@@ -223,7 +234,7 @@ def simulate(settings, organisms, foods, gen):
     return organisms
 
 
-#--- CLASSES ------------------------------------------------------------------+
+#--- CLASSES ------------------------------------------------------------+
 
 
 class food():
@@ -293,7 +304,7 @@ class organism():
         self.y += dy
 
 
-#--- MAIN ---------------------------------------------------------------------+
+#--- MAIN ---------------------------------------------------------------+
 
 
 def run(settings):
@@ -317,6 +328,13 @@ def run(settings):
         # SIMULATE
         organisms = simulate(settings, organisms, foods, gen)
 
+        # MAKE VIDEO
+        if settings['plot']==True and gen==settings['gens']-1:
+        # if settings['plot']==True:
+            cmd = 'ffmpeg -y -r 25 -f image2 -i images/%d-%%04d.png -vcodec mpeg4 -qscale 1 -subcmp 2 -cmp 2 videos/%d.mp4; rm -rf images/*' % (gen, gen)
+            print cmd
+            os.system(cmd)
+
         # EVOLVE
         organisms, stats = evolve(settings, organisms, gen)
         print '> GEN:',gen,'BEST:',stats['BEST'],'AVG:',stats['AVG'],'WORST:',stats['WORST']
@@ -324,8 +342,9 @@ def run(settings):
     pass
 
 
-#--- RUN ----------------------------------------------------------------------+
+#--- RUN ----------------------------------------------------------------+
 
+os.system('mkdir -p images videos')
 run(settings)
     
-#--- END ----------------------------------------------------------------------+
+#--- END ----------------------------------------------------------------+
